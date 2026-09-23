@@ -13,7 +13,7 @@ It pairs their resilience on hard local geometry (low overlap, repetitive struct
 The pipeline comprises:
 
 1. **Retrieval** — SALAD global descriptors build the image neighbor graph.
-2. **Two-view inference (optional)** — Doppelgangers++ (MAST3R-based) estimates covisibility of pairs. Can be skipped via `skip_doppelgangers` when the scene has no repetitive structure or when a quick result is preferred (see [Configuration](#configuration)).
+2. **Two-view inference (optional)** — Doppelgangers++ (MAST3R-based) or XDG (DA3-based) estimates covisibility of pairs. Can be skipped via `skip_doppelgangers` when the scene has no repetitive structure or when a quick result is preferred (see [Configuration](#configuration)).
 3. **Multi-view inference** — a configurable backbone (Pi3 / Pi3X / VGGT / MapAnything) estimates poses and geometry in local star configurations.
 4. **Global mapping** — rotation averaging, intrinsics averaging,
    similarity averaging, and global bundle adjustment fuse the local solutions.
@@ -121,7 +121,8 @@ The most-touched knobs:
 | `images_path` / `write_path` | Input directory / output directory. |
 | `chosen_model` | Multi-view backbone: `pi3` (default), `pi3x`, `vggt`, `map_anything`. |
 | `path_feedforward` | Checkpoint for the chosen multi-view model. |
-| `path_retrieval` / `path_tracker` / `path_dg` | SALAD / VGGSfM / Doppelgangers++ checkpoints. |
+| `dg_model` | Two-view disambiguator: `dg++` (default) or `xdg`. |
+| `path_retrieval` / `path_tracker` / `path_dg` | SALAD / VGGSfM / selected disambiguator checkpoints. |
 | `camera_model` | COLMAP camera model (default `SIMPLE_PINHOLE`). |
 | `intrinsics_mode` | Intrinsics-bucketing strategy: `SHARED` (one camera per unique image shape, default), `PER_FOLDER` (one camera per `(dirname, shape)` pair), or `PER_CAMERA` (one camera per image). |
 | `num_neighbors` | Neighbors per image in the retrieval graph (default `100`). |
@@ -129,7 +130,7 @@ The most-touched knobs:
 | `is_multi_sequence` / `subfolder_regex` | Process several sibling sequences into a single reconstruction. |
 | `rerun_from` | Resume from `retrieval`, `twoview`, or `star` to skip earlier stages. |
 | `coarse_only` | Stop after global mapping; skip the refinement stage. |
-| `skip_doppelgangers` | Skip the Doppelgangers++ two-view disambiguator and treat all retrieval pairs as valid. Useful when the scene has no repetitive structure or for a quick first result. Default `false`. |
+| `skip_doppelgangers` | Skip the selected two-view disambiguator and treat all retrieval pairs as valid. Useful when the scene has no repetitive structure or for a quick first result. Default `false`. |
 
 See [configs/base.yaml](configs/base.yaml) for the complete surface and
 default values.
@@ -193,6 +194,7 @@ GLUEMAP stands on a stack of upstream feed-forward and geometry models:
 
 - [COLMAP](https://github.com/colmap/colmap) — output format and broader SfM ecosystem
 - [Doppelgangers++](https://github.com/doppelgangers25/doppelgangers-plusplus) — two-view disambiguator (with MAST3R / DUSt3R / CroCo)
+- [XDG](https://github.com/xtcpete/xdg) — faster two-view disambiguator (with Depth Anything 3)
 - [SALAD](https://github.com/serizba/salad) — DINO-based image retrieval
 - [VGGSfM](https://github.com/facebookresearch/vggsfm) — point tracker
 - [LightGlue](https://github.com/cvg/LightGlue) — feature extractor

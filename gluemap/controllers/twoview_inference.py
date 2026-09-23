@@ -1,5 +1,6 @@
 import argparse
 import logging
+from contextlib import nullcontext
 from typing import ClassVar
 
 import numpy as np
@@ -25,11 +26,18 @@ class BatchInferenceDG:
         model: torch.nn.Module,
         device: str = "cuda",
         dtype: torch.dtype = torch.bfloat16,
+        dg_model: str = "dg++",
     ):
         self.model = model
         self.device = device
         self.dtype = dtype
+        self.dg_model = dg_model
+        if dg_model == "xdg":
+            from thirdparty.xdg.training.precision import resolve_autocast_dtype
 
+            self.dtype = resolve_autocast_dtype("auto", device=device)
+
+    @torch.inference_mode()
     def main(self, batch: dict) -> dict[str, torch.Tensor]:
         """Run the DG model on a single batch.
 
@@ -40,7 +48,35 @@ class BatchInferenceDG:
         Returns:
             ``{"scores": Tensor(B,)}`` — per-pair confidence in ``[0, 1]``.
         """
-        images = batch["images"].to(self.device)
+        images = batch["images"].to(self.device, dtype=torch.float32)
+        if self.dg_model == "xdg":
+            width, height = 560, 560
+            if images.ndim != 5 or tuple(images.shape[1:]) != (
+                2,
+                3,
+                height,
+                width,
+            ):
+                raise ValueError(
+                    f"XDG expects (B, 2, 3, {height}, {width}), "
+                    f"got {tuple(images.shape)}"
+                )
+            autocast = (
+                torch.autocast(device_type="cuda", dtype=self.dtype)
+                if self.dtype is not None
+                else nullcontext()
+            )
+            # Scope upstream's matmul setting to XDG in this shared process.
+            previous = torch.get_float32_matmul_precision()
+            try:
+                torch.set_float32_matmul_precision("high")
+                with autocast:
+                    logits = self.model(images=images, masks=None)
+                # Class 1 means a valid pair; normalize in FP32.
+                scores = logits.float().softmax(dim=1)[:, 1]
+            finally:
+                torch.set_float32_matmul_precision(previous)
+            return {"scores": scores.cpu()}
 
         view1 = {
             "img": images[:, 0],
@@ -113,7 +149,10 @@ class TwoViewInferencePipeline(BaseInferencePipeline):
         self, models: dict[str, torch.nn.Module]
     ) -> BatchInferenceDG:
         return BatchInferenceDG(
-            models["dg"], device=self.device, dtype=self.dtype
+            models["dg"],
+            device=self.device,
+            dtype=self.dtype,
+            dg_model=getattr(self.args, "dg_model", "dg++"),
         )
 
     def _run_batch_step(
@@ -183,6 +222,11 @@ def run_twoview_inference(
     preloaded_models: dict[str, torch.nn.Module] | None = None,
 ):
     """Module-level wrapper to instantiate TwoViewInferencePipeline and run."""
+    if getattr(args, "dg_model", "dg++") == "xdg":
+        from pathlib import Path
+
+        path = Path(file_name)
+        file_name = str(path.with_name(f"{path.stem}_xdg{path.suffix}"))
     pipeline = TwoViewInferencePipeline(
         args,
         world_size,

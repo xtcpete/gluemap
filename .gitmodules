@@ -13,3 +13,6 @@
 [submodule "thirdparty/mapanything"]
 	path = thirdparty/mapanything
 	url = https://github.com/facebookresearch/map-anything.git
+[submodule "thirdparty/xdg"]
+	path = thirdparty/xdg
+	url = https://github.com/xtcpete/xdg.git

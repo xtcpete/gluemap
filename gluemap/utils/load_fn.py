@@ -9,6 +9,7 @@ def load_and_preprocess_images_inner(
     image_size: int = 518,
     force_square: bool = True,
     patch_size: int = 14,
+    resize_square: bool = False,
 ) -> tuple[torch.Tensor, list[torch.Tensor], list[list[float]]]:
     """Resize and (optionally) pad a batch of (C, H, W) image tensors.
 
@@ -23,6 +24,8 @@ def load_and_preprocess_images_inner(
         image_size: Target size for the longer image side.
         force_square: Pad to a square of side ``image_size``.
         patch_size: Patch side length the resized images must align to.
+        resize_square: Resize both sides to ``image_size`` without padding.
+            Uses antialiased bilinear interpolation.
 
     Returns:
         ``(images, images_ori, images_change)`` where ``images`` is a
@@ -54,7 +57,9 @@ def load_and_preprocess_images_inner(
         # width, height = img.size
         height, width = img.shape[-2:]
 
-        if width > height:
+        if resize_square:
+            new_width = new_height = image_size
+        elif width > height:
             new_width = image_size
 
             # Calculate height maintaining aspect ratio, divisible by patch_size
@@ -79,6 +84,7 @@ def load_and_preprocess_images_inner(
             size=(int(new_height), int(new_width)),
             mode="bilinear",
             align_corners=False,
+            antialias=resize_square,
         ).squeeze(0)
 
         shapes.add((img.shape[1], img.shape[2]))
@@ -130,6 +136,7 @@ def load_and_preprocess_images(
     image_size: int = 518,
     force_square: bool = True,
     patch_size: int = 14,
+    resize_square: bool = False,
 ) -> tuple[torch.Tensor, list[torch.Tensor], list[list[float]]]:
     """Read images from disk and preprocess them for the multi-view model.
 
@@ -142,6 +149,8 @@ def load_and_preprocess_images(
         image_size: Target size for the longer image side.
         force_square: Pad to a square of side ``image_size``.
         patch_size: Patch side length the resized images must align to.
+        resize_square: Resize both sides to ``image_size`` without padding.
+            Uses antialiased bilinear interpolation.
 
     Returns:
         Same triple as :func:`load_and_preprocess_images_inner`.
@@ -168,6 +177,7 @@ def load_and_preprocess_images(
         image_size=image_size,
         force_square=force_square,
         patch_size=patch_size,
+        resize_square=resize_square,
     )
 
 

@@ -13,7 +13,7 @@ git submodule update --init --recursive
 ```
 
 The submodules under `thirdparty/` (pi3, vggt, mapanything,
-doppelgangers-plusplus, salad) are required at runtime — they are added
+doppelgangers-plusplus, salad, xdg) are required at runtime — they are added
 to `sys.path` by `thirdparty/path_to_thirdparty.py`. Skipping this step
 will cause `ImportError` on first run.
 
@@ -141,6 +141,9 @@ mv checkpoints/model.safetensors checkpoints/pi3.safetensors
 # Doppelgangers++
 hf download doppelgangers25/doppelgangers_plusplus \
     checkpoint-dg+visym.pth --local-dir checkpoints
+
+# XDG
+hf download xtcpete/xdg xdg.pth --local-dir checkpoints
 ```
 
 If you switch `chosen_model` to `vggt` or `map_anything`, fetch the
@@ -171,7 +174,7 @@ pytest tests/
 - **`No matching distribution found for lightglue`** — `lightglue` is
   installed from `git+https://github.com/cvg/LightGlue.git` (declared
   in `pyproject.toml`). Make sure pip can reach GitHub.
-- **`ImportError: pi3 / vggt / mapanything is not initialized`** — you
+- **`ImportError: pi3 / vggt / mapanything / xdg is not initialized`** — you
   forgot `git submodule update --init --recursive`.
 - **`ImportError: /lib64/libstdc++.so.6: version 'CXXABI_1.3.15' not
   found (required by .../libceres.so.4)`** — you have PyTorch installed

@@ -38,7 +38,13 @@ class MultiSequencePairs(DemoBaseDataset):
         self.images_path_root = args.images_path
         self.datasets = datasets
 
-        super().__init__(args, patch_size=16)
+        is_xdg = getattr(args, "dg_model", "dg++") == "xdg"
+        super().__init__(
+            args,
+            patch_size=14 if is_xdg else 16,
+            image_size=560 if is_xdg else 512,
+            resize_square=is_xdg,
+        )
 
         # Load all the images, and generate SALAD descriptors for matching
         img_list = []

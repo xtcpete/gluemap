@@ -25,7 +25,13 @@ class DemoBaseDataset:
     full set fits in memory.
     """
 
-    def __init__(self, args: argparse.Namespace, patch_size: int = 16) -> None:
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        patch_size: int = 16,
+        image_size: int | None = None,
+        resize_square: bool = False,
+    ) -> None:
         """Initialize size-related settings from ``args`` and ``patch_size``.
 
         Args:
@@ -34,13 +40,17 @@ class DemoBaseDataset:
             patch_size: Patch side length the network expects. ``14``
                 bumps ``image_size`` to ``518`` (DINO/Pi3-style models);
                 anything else sets ``image_size`` to ``512``.
+            image_size: Override the model's target image size.
+            resize_square: Resize directly to a square instead of preserving
+                aspect ratio and padding.
         """
-        self.image_size = 512
         self.patch_size = patch_size
-        if patch_size == 14:
-            self.image_size = 518
-        else:
-            self.image_size = 512
+        self.image_size = (
+            image_size
+            if image_size is not None
+            else (518 if patch_size == 14 else 512)
+        )
+        self.resize_square = resize_square
 
         self.camera_model = (
             args.camera_model
@@ -117,6 +127,7 @@ class DemoBaseDataset:
                     image_size=self.image_size,
                     patch_size=self.patch_size,
                     force_square=self.force_square,
+                    resize_square=self.resize_square,
                 )
             else:
                 images, images_ori, images_change = (
@@ -125,6 +136,7 @@ class DemoBaseDataset:
                         image_size=self.image_size,
                         patch_size=self.patch_size,
                         force_square=self.force_square,
+                        resize_square=self.resize_square,
                     )
                 )
 
@@ -228,6 +240,7 @@ class DemoBaseDataset:
                     image_size=self.image_size,
                     patch_size=self.patch_size,
                     force_square=self.force_square,
+                    resize_square=self.resize_square,
                 )
             )
             self.images_1024, self.images_change_1024 = (

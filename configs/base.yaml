@@ -5,6 +5,7 @@
 
 # Model selection
 chosen_model: pi3   # pi3, pi3x, vggt, map_anything
+dg_model: dg++      # dg++, xdg (set path_dg to checkpoints/xdg.pth)
 
 # Model paths
 path_feedforward: checkpoints/pi3.safetensors

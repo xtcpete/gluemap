@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -58,7 +59,7 @@ def load_models(
 
     * ``"pi3"`` / ``"pi3x"`` / ``"vggt"`` / ``"map_anything"`` — multi-view
       pose backbones, weights from ``args.path_feedforward``.
-    * ``"dg"`` — Doppelganger++ (MASt3R), weights from ``args.path_dg``.
+    * ``"dg"`` — ``args.dg_model`` (DG++ or XDG), weights from ``args.path_dg``.
     * ``"vggsfm"`` — VGGSfM tracker, weights from ``args.path_tracker``.
     * ``"salad"`` — SALAD VPR descriptor, weights from
       ``args.path_retrieval``.
@@ -117,8 +118,61 @@ def load_models(
             args.path_feedforward
         )
 
+    dg_model = getattr(args, "dg_model", "dg++")
+    if dg_model not in {"dg++", "xdg"}:
+        raise ValueError(
+            f"Unknown dg_model: {dg_model!r}; expected 'dg++' or 'xdg'"
+        )
+    if "dg" in keys and dg_model == "xdg":
+        if not Path(args.path_dg).is_file():
+            raise FileNotFoundError(
+                f"XDG checkpoint not found: {args.path_dg!r}. "
+                "Set path_dg to the released xdg.pth checkpoint."
+            )
+        from thirdparty.xdg.src.models.vit_classifier import decoder
+        from thirdparty.xdg.src.utils.config import load_model_config
+
+        config_path = (
+            Path(__file__).resolve().parents[2]
+            / "thirdparty/xdg/configs/model_configs/xdg.yaml"
+        )
+        config = load_model_config(config_path)
+        model = decoder(config.model, load_backbone_pretrained=False)
+        checkpoint = torch.load(
+            args.path_dg, map_location="cpu", weights_only=True
+        )
+        state = checkpoint
+        if isinstance(checkpoint, dict):
+            state = (
+                checkpoint.get("dec")
+                or checkpoint.get("state_dict")
+                or checkpoint.get("model")
+                or checkpoint
+            )
+        if not isinstance(state, dict):
+            raise TypeError(
+                f"XDG checkpoint contains no state dictionary: {args.path_dg}"
+            )
+        # Match upstream's handling of plain, Lightning and DDP checkpoints.
+        candidates = [state]
+        for prefix in ("module.", "model.", "model.module."):
+            stripped = {
+                k[len(prefix) :]: v
+                for k, v in state.items()
+                if k.startswith(prefix)
+            }
+            if stripped:
+                candidates.append(stripped)
+        target_keys = set(model.state_dict())
+        state = max(
+            candidates,
+            key=lambda candidate: len(target_keys.intersection(candidate)),
+        )
+        model.load_state_dict(state, strict=True)
+        models["dg"] = model.float()
+
     # Load Doppelganger++
-    if "dg" in keys:
+    if "dg" in keys and dg_model == "dg++":
         from mast3r.model import AsymmetricMASt3R
 
         models["dg"] = AsymmetricMASt3R(

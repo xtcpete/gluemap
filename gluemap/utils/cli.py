@@ -53,6 +53,13 @@ def get_args_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--dg_model",
+        default="dg++",
+        choices=["dg++", "xdg"],
+        help="two-view disambiguation model (path_dg must match)",
+    )
+
+    parser.add_argument(
         "--path_feedforward",
         default="",
         type=str,
@@ -68,7 +75,10 @@ def get_args_parser() -> argparse.ArgumentParser:
         "--path_tracker", default="", type=str, help="path to the tracker model"
     )
     parser.add_argument(
-        "--path_dg", default="", type=str, help="path to the doppelganger model"
+        "--path_dg",
+        default="",
+        type=str,
+        help="checkpoint for the selected dg_model",
     )
 
     # IO

@@ -12,6 +12,10 @@ SUBMODULES = {
     path.join("doppelgangers-plusplus", "dust3r", "croco"): path.join(
         "doppelgangers-plusplus", "dust3r", "croco", "models"
     ),
+    "xdg": path.join("xdg", "src", "models"),
+    path.join("xdg", "Depth-Anything-3", "src"): path.join(
+        "xdg", "Depth-Anything-3", "src", "depth_anything_3"
+    ),
     "vggt": path.join("vggt", "vggt", "models"),
     "mapanything": path.join("mapanything", "mapanything", "models"),
 }
